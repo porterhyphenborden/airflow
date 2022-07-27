@@ -121,11 +121,14 @@ def init_plugins(app):
     plugins_manager.initialize_web_ui_plugins()
 
     appbuilder = app.appbuilder
+    rp_session = None
 
     for view in plugins_manager.flask_appbuilder_views:
         name = view.get('name')
         if name:
             log.debug("Adding view %s with menu", name)
+            # Store reactive pipeline session
+            rp_session = view["view"].datamodel.session
             appbuilder.add_view(view["view"], name, category=view["category"])
         else:
             # if 'name' key is missing, intent is to add view without menu
@@ -139,6 +142,17 @@ def init_plugins(app):
     for blue_print in plugins_manager.flask_blueprints:
         log.debug("Adding blueprint %s:%s", blue_print["name"], blue_print["blueprint"].import_name)
         app.register_blueprint(blue_print["blueprint"])
+    
+    # Manually set session to reactive pipeline session stored above on any RP plugin views
+    rp_view_names = [
+        'CensusFeedConfigurationFABView',
+        'MarketplaceFeedConfigurationFABView',
+        'DataFeedFileConfigurationFABView',
+        'WhitelistFeedConfigurationFABView'
+    ]
+    for view in app.appbuilder.baseviews:
+        if type(view).__name__ in rp_view_names:
+            view.datamodel.session = rp_session
 
 
 def init_connection_form():
